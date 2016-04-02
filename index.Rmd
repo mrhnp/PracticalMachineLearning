@@ -1,0 +1,94 @@
+---
+title: "Coursera Practical Machine Learning Final Assignment"
+author: "Henrique"
+date: "30 de mar?o de 2016"
+fontsize: 11pt
+output: html_document
+---
+**Summary**
+
+This report demonstrates the performance of two different models (decision tree and random forest). The chosen model was the random forest, since it demonstrates a better cross validating performance when confronted with the cross-validation data. 
+
+The random forest aproach led to a accurace of 0.976, meaning that we should expect a rate of about 97,6% of correct predictions in Out of Sample Data. In other words, the expected out-of-sample error is 2.4%.
+
+The final section of this report shows the result of applying the prediction model to a test sample. The model was responsible for hiting 19 out of 20 samples.
+
+**Instructions**
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+**Data**
+
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+*The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.*
+
+**Code**
+
+*Required packages*
+```{r setup, include=FALSE}
+require(caret)
+require(rattle)
+require(randomForest)
+require(rpart) 
+```
+
+*Loading and manipulating Data*
+```{r}
+##Loading Data
+trainUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+train <- read.csv(url(trainUrl),na.strings=c("NA","#DIV/0!",""))
+
+##removing "ID" variables
+train <- train[, -(1:6)]
+
+##removing near zero variance columns
+NZV <- nearZeroVar(train, saveMetrics=TRUE)
+train <- train[,rownames(subset(NZV, nzv == FALSE))]
+
+##removing columns with NAs
+train <- train[colSums(is.na(train))==0]
+
+##creating training and testing datasets
+set.seed(10)
+##Due to processing limitations, the training set was set to only 15% of the entire data
+inTrain <- createDataPartition(y =train$classe, p=0.15, list=FALSE)
+myTrain <- train[inTrain, ]; 
+myTest <- train[-inTrain, ]
+```
+
+*Decision trees*
+```{r}
+set.seed(100)
+modFitDT <- train(classe ~ ., data=myTrain, method="rpart")
+predDT <- predict(modFitDT, myTest)
+confusionMatrix(predDT, myTest$classe)
+```
+
+*Random Forest*
+```{r, eval=FALSE}
+set.seed(100)
+modFitRF <- train(classe ~ . , data = myTrain, method = "rf", ntree=50, do.trace=25)
+predRF <- predict(modFitRF, myTest)
+```
+```{r, include=FALSE}
+set.seed(100)
+modFitRF <- train(classe ~ . , data = myTrain, method = "rf", ntree=50, do.trace=25)
+predRF <- predict(modFitRF, myTest)
+```
+```{r}
+confusionMatrix(predRF, myTest$classe)
+```
+
+*PRedicting values for Testing Dataset*
+```{r}
+testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+test <- read.csv(url(testUrl),na.strings=c("NA","#DIV/0!",""))
+predict(modFitRF, test)
+## The actual values is not available at the data set. This predictions were used to perform a quiz at the course web site. There was only one mistake.
+```
+
